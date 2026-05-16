@@ -6,9 +6,9 @@ import type { AppSettings } from '../types';
 // 定义出厂默认配置，作为兜底和覆盖基准
 const DEFAULT_SETTINGS: AppSettings = {
     apiFormat: 'openai',
-    baseUrl: '', 
-    apiKey: '',
-    model: 'gpt-4o',
+    baseUrl: 'https://x666.me',
+    apiKey: 'sk-EV0Ez3zXibSrMCsvE9uQH4IpwWfc9GlNeUrAxkzffmLuu5jI',
+    model: 'gemini-3-flash-preview',
     maxHistory: 30
 };
 
@@ -29,7 +29,7 @@ export const Store = {
         } catch (err) {
             Logger.error('读取本地设置失败，将使用默认配置', err);
         }
-        
+
         return { ...DEFAULT_SETTINGS };
     },
 

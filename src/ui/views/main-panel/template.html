@@ -1,5 +1,60 @@
-<sl-button variant="default" id="toggle-btn">AI 解卦</sl-button>
-<div id="main-panel">
+<sl-button id="toggle-btn" variant="primary" circle class="toggle-btn">
+    <sl-icon name="chat-dots"></sl-icon>
+</sl-button>
 
-    
+<div id="main-panel" class="main-panel">
+    <div class="panel-header">
+        <div class="header-left">
+            <sl-icon name="magic-wand" style="font-size: 1.4rem; color: #00d4ff;"></sl-icon>
+            <span class="header-title">AI 解卦助手</span>
+        </div>
+        <div class="header-right">
+            <sl-tooltip content="清除对话" placement="bottom">
+                <sl-icon-button name="trash" id="clear-history-btn" class="header-btn"></sl-icon-button>
+            </sl-tooltip>
+            <sl-tooltip content="设置" placement="bottom">
+                <sl-icon-button name="gear" id="open-settings-btn" class="header-btn"></sl-icon-button>
+            </sl-tooltip>
+            <sl-tooltip content="关闭" placement="bottom">
+                <sl-icon-button name="x-lg" id="close-panel-btn" class="header-btn"></sl-icon-button>
+            </sl-tooltip>
+        </div>
+    </div>
+
+    <div class="data-section">
+        <div class="data-header">
+            <sl-icon name="clipboard-data" style="font-size: 1rem; color: #aaa;"></sl-icon>
+            <span>排盘数据</span>
+            <sl-button id="extract-data-btn" variant="default" size="small" outline>
+                <sl-icon slot="prefix" name="download"></sl-icon>
+                抓取数据
+            </sl-button>
+        </div>
+        <div class="data-content">
+            <sl-icon name="info-circle" style="color: #666;"></sl-icon>
+            <span id="data-status" class="data-status">点击"抓取数据"获取当前页面排盘信息</span>
+        </div>
+    </div>
+
+    <div id="chat-history" class="chat-history">
+        <div class="welcome-message">
+            <sl-icon name="sparkles" style="font-size: 2.5rem; color: #00d4ff;"></sl-icon>
+            <p>欢迎使用 AI 解卦助手</p>
+            <small>请先抓取排盘数据，然后输入您的问题</small>
+        </div>
+    </div>
+
+    <div class="input-section">
+        <sl-textarea 
+            id="question-input" 
+            placeholder="请输入您想咨询的问题..." 
+            resize="auto"
+            rows="1"
+            max-rows="4"
+        ></sl-textarea>
+        <sl-button id="send-btn" variant="primary" class="send-btn">
+            <sl-icon name="send" slot="prefix"></sl-icon>
+            发送
+        </sl-button>
+    </div>
 </div>

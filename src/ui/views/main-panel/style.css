@@ -1,0 +1,241 @@
+.toggle-btn {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    width: 56px;
+    height: 56px;
+    font-size: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    --sl-input-border-width: 0px;
+    --sl-input-border-color: transparent;
+}
+
+.toggle-btn::part(base) {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.toggle-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.35);
+}
+
+.main-panel {
+    display: none;
+    position: absolute;
+    right: 20px;
+    bottom: 90px;
+    width: 380px;
+    max-height: 600px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 16px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, #222 0%, #2a2a2a 100%);
+    border-bottom: 1px solid #333;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.header-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.header-btn {
+    font-size: 1.1rem;
+    color: #aaa;
+    transition: color 0.2s ease;
+}
+
+.header-btn:hover {
+    color: #00d4ff;
+}
+
+.data-section {
+    padding: 12px 18px;
+    background: #1e1e1e;
+    border-bottom: 1px solid #333;
+}
+
+.data-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #ccc;
+}
+
+.data-header sl-button {
+    margin-left: auto;
+}
+
+.data-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #252525;
+    border-radius: 8px;
+    border: 1px dashed #3a3a3a;
+}
+
+.data-status {
+    font-size: 0.8rem;
+    color: #888;
+    flex: 1;
+}
+
+.data-status.success {
+    color: #4ade80;
+}
+
+.chat-history {
+    flex: 1;
+    min-height: 280px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding: 16px;
+    background: #1a1a1a;
+}
+
+.welcome-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #666;
+    text-align: center;
+    gap: 8px;
+}
+
+.welcome-message p {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #ccc;
+}
+
+.welcome-message small {
+    font-size: 0.85rem;
+}
+
+.message {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 16px;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.user-message {
+    flex-direction: row-reverse;
+}
+
+.msg-avatar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+}
+
+.msg-bubble {
+    max-width: 85%;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    word-break: break-word;
+}
+
+.user-message .msg-bubble {
+    background: #0ea5e9;
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+.ai-message .msg-bubble {
+    background: #2a2a2a;
+    color: #e5e5e5;
+    border-bottom-left-radius: 4px;
+    border: 1px solid #3a3a3a;
+}
+
+.input-section {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    padding: 14px 18px;
+    background: #1e1e1e;
+    border-top: 1px solid #333;
+}
+
+.input-section sl-textarea {
+    flex: 1;
+}
+
+.send-btn {
+    flex-shrink: 0;
+    min-width: 80px;
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

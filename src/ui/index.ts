@@ -1,14 +1,13 @@
 // src/ui/index.ts
 import { Logger } from '../utils/logger';
 import { MainPanel } from './views/main-panel';
+// 引入刚刚写好的设置弹窗
+import { SettingsDialog } from './components/settings-dialog';
 import { GM_addStyle } from '$';
 import '@shoelace-style/shoelace/dist/shoelace.js';
 import darkThemeCss from '@shoelace-style/shoelace/dist/themes/dark.css?raw';
 
 export const UIManager = {
-    /**
-     * 注入 Shoelace 环境
-     */
     injectShoelace: () => {
         Logger.debug('开始从本地注入 Shoelace 环境...');
         GM_addStyle(darkThemeCss);
@@ -16,29 +15,25 @@ export const UIManager = {
         document.documentElement.classList.add('sl-theme-dark');
     },
 
-    /**
-     * 渲染完整 UI 并挂载到页面
-     */
     mount: (): ShadowRoot => {
         Logger.debug('开始挂载 UI 结界...');
 
-        // 1. 创建顶级容器
         const hostDiv = document.createElement('div');
         hostDiv.id = 'ai-gua-host';
         hostDiv.style.cssText = 'position: fixed; right: 20px; bottom: 20px; z-index: 999999;';
         document.body.appendChild(hostDiv);
 
-        // 2. 开启 Shadow DOM
         const shadowRoot = hostDiv.attachShadow({ mode: 'open' });
 
-        // 3. 将各个组件/视图的 HTML 组装进去
+        // 🌟 把主面板和设置弹窗的 HTML 全都塞进结界里
         shadowRoot.innerHTML = `
             ${MainPanel.render()}
-            `;
+            ${SettingsDialog.render()}
+        `;
 
-        // 4. 委派各个组件去绑定自己的事件
+        // 🌟 分别调用它们自己的事件绑定函数
         MainPanel.bindEvents(shadowRoot);
-        // SettingsDialog.bindEvents(shadowRoot);
+        SettingsDialog.bindEvents(shadowRoot);
 
         return shadowRoot;
     }

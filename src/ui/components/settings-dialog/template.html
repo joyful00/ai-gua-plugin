@@ -1,0 +1,77 @@
+<sl-dialog id="settings-dialog" label="API 配置" class="settings-dialog">
+    <div class="settings-content">
+        <div class="settings-section">
+            <div class="section-title">
+                <sl-icon name="server"></sl-icon>
+                <span>接口设置</span>
+            </div>
+            <div class="section-body">
+                <sl-select id="set-api-format" label="API 规范" value="openai" hoist>
+                    <sl-option value="openai">OpenAI 兼容格式</sl-option>
+                    <sl-option value="gemini">Gemini 原生格式</sl-option>
+                    <sl-option value="anthropic">Anthropic 格式</sl-option>
+                </sl-select>
+                <sl-divider></sl-divider>
+                <sl-input 
+                    id="set-base-url" 
+                    label="API 地址" 
+                    placeholder="https://api.openai.com/v1"
+                    clearable
+                >
+                    <sl-icon name="globe" slot="prefix"></sl-icon>
+                </sl-input>
+                <sl-input 
+                    id="set-api-key" 
+                    label="API Key" 
+                    type="password" 
+                    password-toggle 
+                    clearable
+                    placeholder="sk-xxxxxxxxxxxxxxxx"
+                >
+                    <sl-icon name="key" slot="prefix"></sl-icon>
+                </sl-input>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="section-title">
+                <sl-icon name="cpu"></sl-icon>
+                <span>模型设置</span>
+            </div>
+            <div class="section-body">
+                <sl-input 
+                    id="set-model" 
+                    label="模型名称" 
+                    value="gpt-4o"
+                    clearable
+                    placeholder="gpt-4o / deepseek-chat / ..."
+                >
+                    <sl-icon name="box" slot="prefix"></sl-icon>
+                </sl-input>
+                <sl-input 
+                    id="set-max-history" 
+                    label="历史记录数" 
+                    type="number"
+                    value="30"
+                    min="1"
+                    max="100"
+                >
+                    <sl-icon name="list-numbered" slot="prefix"></sl-icon>
+                </sl-input>
+            </div>
+        </div>
+
+        <div class="settings-tips">
+            <sl-icon name="lightbulb"></sl-icon>
+            <span>提示：支持 OpenAI、DeepSeek、通义千问等兼容接口的中转服务</span>
+        </div>
+    </div>
+
+    <div slot="footer" class="dialog-footer">
+        <sl-button id="cancel-settings-btn" variant="default">取消</sl-button>
+        <sl-button id="save-settings-btn" variant="primary">
+            <sl-icon name="check" slot="prefix"></sl-icon>
+            保存配置
+        </sl-button>
+    </div>
+</sl-dialog>

@@ -8,5 +8,5 @@ import { GM_info } from '$';
 export const AppConfig = {
     name: GM_info.script.name || 'AI 解卦助手',
     version: GM_info.script.version || '1.0.0',
-    isDebug: import.meta.env.DEV,
+    isDebug: true,
 };
