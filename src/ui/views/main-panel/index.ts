@@ -82,7 +82,7 @@ export const MainPanel = {
 
         closeBtn?.addEventListener('click', () => {
             (mainPanel as HTMLElement).style.display = 'none';
-            (toggleBtn as HTMLElement).style.display = 'inline-flex';
+            (toggleBtn as HTMLElement).style.display = '';
         });
 
         clearHistoryBtn?.addEventListener('click', clearHistory);
