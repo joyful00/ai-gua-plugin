@@ -1,36 +1,163 @@
-// src/ui/views/main-panel/index.ts
 import htmlContent from './template.html?raw';
 import cssContent from './style.css?raw';
 import { AIRequestService } from '../../../api';
 import { Store } from '../../../store';
+import type {
+    AIResult,
+    AppSettings,
+    ChatMessage,
+    ChatSession,
+    ContextMode,
+    DivinationType,
+    ScrapedSource,
+    SessionPhase
+} from '../../../types';
+import {
+    ContextModeHints,
+    ContextModeLabels,
+    DivinationTypeLabels,
+    SessionPhaseLabels,
+    resolveDivinationType,
+    shouldRestartFullAnalysis
+} from '../../../utils/divination';
 import { Logger } from '../../../utils/logger';
 import { PageScraper } from '../../../utils/scraper';
-import type { ChatMessage } from '../../../types';
 
-// 在内存中维护当前的对话历史
-let currentHistory: ChatMessage[] = [];
+const WELCOME_MESSAGE_HTML = `
+    <div class="welcome-message">
+        <sl-icon name="sparkles" style="font-size: 2.5rem; color: #00d4ff;"></sl-icon>
+        <p>欢迎使用 AI 解卦助手</p>
+        <small>请先抓取排盘数据，再开始首问分析；后续追问会自动切换到追问模式。</small>
+    </div>
+`;
 
-/**
- * 🌟 核心动能：利用 HTML5 Canvas 纯手工绘制高颜值的赛博解卦分享卡片
- * 具备极佳的兼容性，完美规避 Shadow DOM 的截图死角
- */
-const drawAndExportImage = (analysis: string, result: string) => {
+const SETTINGS_FIELD_LABELS: Record<'baseUrl' | 'apiKey' | 'model', string> = {
+    baseUrl: 'API 地址',
+    apiKey: 'API Key',
+    model: '模型名称'
+};
+
+const escapeHtml = (value: string): string => {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+};
+
+const safeMultilineHtml = (value: string): string => escapeHtml(value).replace(/\n/g, '<br>');
+
+const formatAIValue = (val: any, fallback: string): string => {
+    if (!val) return fallback;
+    if (typeof val === 'string') return val;
+    if (Array.isArray(val)) return val.join('\n');
+    if (typeof val === 'object') {
+        return Object.entries(val)
+            .map(([key, value]) => `${key}: ${value}`)
+            .join('\n');
+    }
+    return String(val);
+};
+
+const normalizeBasis = (value: AIResult['盘面依据']): string[] => {
+    if (Array.isArray(value)) {
+        return value.map(item => String(item).trim()).filter(Boolean);
+    }
+
+    if (typeof value === 'string' && value.trim()) {
+        return [value.trim()];
+    }
+
+    return [];
+};
+
+type ExportSectionTone = 'analysis' | 'result' | 'basis' | 'meta';
+
+interface ExportSection {
+    title: string;
+    content: string;
+    tone: ExportSectionTone;
+}
+
+interface ExportReportPayload {
+    divinationLabel: string;
+    phaseLabel: string;
+    contextModeLabel: string;
+    question: string;
+    sourceTitle?: string;
+    sourceUrl?: string;
+    analysis: string;
+    result: string;
+    basisList: string[];
+}
+
+const getLocalDateStamp = (): string => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const sanitizeFileName = (value: string): string => {
+    return value.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '').trim() || '术数报告';
+};
+
+const drawAndExportImage = (payload: ExportReportPayload) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const cardWidth = 600;
-    const padding = 40;
+    const scale = Math.max(2, Math.min(window.devicePixelRatio || 2, 3));
+    const cardWidth = 720;
+    const padding = 44;
     const contentWidth = cardWidth - padding * 2;
-    const lineHeight = 28;
-    const sectionGap = 35;
+    const sectionGap = 24;
+    const footerHeight = 62;
+    const fonts = {
+        title: 'bold 26px "PingFang SC", "Microsoft YaHei", sans-serif',
+        subtitle: '14px "PingFang SC", "Microsoft YaHei", sans-serif',
+        sectionTitle: 'bold 18px "PingFang SC", "Microsoft YaHei", sans-serif',
+        body: '15px "PingFang SC", "Microsoft YaHei", sans-serif',
+        result: '500 16px "PingFang SC", "Microsoft YaHei", sans-serif',
+        footer: '12px "PingFang SC", "Microsoft YaHei", sans-serif'
+    };
 
-    // 设置初始字体以便高精度测量文字宽度
-    ctx.font = '15px "PingFang SC", "Microsoft YaHei", sans-serif';
+    const sectionStyles: Record<ExportSectionTone, { title: string; body: string; bg: string; border: string; font: string }> = {
+        result: {
+            title: '#10b981',
+            body: '#dcfce7',
+            bg: 'rgba(16, 185, 129, 0.10)',
+            border: 'rgba(16, 185, 129, 0.32)',
+            font: fonts.result
+        },
+        analysis: {
+            title: '#8bdcff',
+            body: '#e4e4e7',
+            bg: 'rgba(14, 165, 233, 0.06)',
+            border: 'rgba(14, 165, 233, 0.24)',
+            font: fonts.body
+        },
+        basis: {
+            title: '#fcd34d',
+            body: '#fde68a',
+            bg: 'rgba(245, 158, 11, 0.08)',
+            border: 'rgba(245, 158, 11, 0.26)',
+            font: fonts.body
+        },
+        meta: {
+            title: '#c7d2fe',
+            body: '#d1d5db',
+            bg: 'rgba(99, 102, 241, 0.08)',
+            border: 'rgba(99, 102, 241, 0.22)',
+            font: fonts.body
+        }
+    };
 
-    // 智能文本多段落自动换行算法
-    const wrapText = (title: string, text: string, maxWidth: number) => {
-        const lines: string[] = [title]; // 头部压入标题
+    const wrapText = (text: string, maxWidth: number, font: string): string[] => {
+        ctx.font = font;
+        const lines: string[] = [];
         const paragraphs = text.split('\n');
 
         paragraphs.forEach(p => {
@@ -39,119 +166,151 @@ const drawAndExportImage = (analysis: string, result: string) => {
                 return;
             }
             let line = '';
-            for (let i = 0; i < p.length; i++) {
-                const testLine = line + p[i];
+            for (const char of Array.from(p)) {
+                const testLine = line + char;
                 const metrics = ctx.measureText(testLine);
-                if (metrics.width > maxWidth) {
+                if (metrics.width > maxWidth && line) {
                     lines.push(line);
-                    line = p[i];
+                    line = char;
                 } else {
                     line = testLine;
                 }
             }
-            lines.push(line);
+            if (line) {
+                lines.push(line);
+            }
         });
         return lines;
     };
 
-    // 预计算两段文字的物理换行排版结果
-    const analysisLines = wrapText('【推演分析】', analysis, contentWidth);
-    const resultLines = wrapText('【断语结果】', result, contentWidth);
+    const sections: ExportSection[] = [
+        { title: '推演分析', content: payload.analysis, tone: 'analysis' },
+        { title: '断语结果', content: payload.result, tone: 'result' }
+    ];
 
-    // 动态计算整张卡片的总像素高度
-    let currentY = padding + 65; // 预留顶部标题区域高度
-    const analysisStartY = currentY;
-    currentY += analysisLines.length * lineHeight + sectionGap;
+    if (payload.basisList.length) {
+        sections.push({
+            title: '盘面依据',
+            content: payload.basisList.map((item, index) => `${index + 1}. ${item}`).join('\n'),
+            tone: 'basis'
+        });
+    }
 
-    const resultStartY = currentY;
-    // 为结论卡片增加额外的上下内部 Padding 间距高度
-    currentY += resultLines.length * lineHeight + 40 + padding;
+    const metaItems = [
+        `提问：${payload.question}`,
+        payload.sourceTitle ? `来源：${payload.sourceTitle}` : '',
+        payload.sourceUrl ? `地址：${payload.sourceUrl}` : ''
+    ].filter(Boolean);
 
-    canvas.width = cardWidth;
-    canvas.height = currentY;
+    if (metaItems.length) {
+        sections.push({
+            title: '会话信息',
+            content: metaItems.join('\n'),
+            tone: 'meta'
+        });
+    }
 
-    // --- 🔮 开始渲染高精度的精美视觉样式 ---
-    // 1. 背景色：玄学墨黑科技主题
+    const preparedSections = sections.map(section => {
+        const style = sectionStyles[section.tone];
+        const lines = wrapText(section.content, contentWidth - 32, style.font);
+        const lineHeight = section.tone === 'result' ? 29 : 27;
+        const height = 58 + lines.length * lineHeight;
+        return { ...section, lines, lineHeight, height };
+    });
+
+    let currentY = padding + 88;
+    const sectionPositions = preparedSections.map(section => {
+        const top = currentY;
+        currentY += section.height + sectionGap;
+        return { top, section };
+    });
+
+    const canvasHeight = currentY + footerHeight - sectionGap;
+    canvas.width = cardWidth * scale;
+    canvas.height = canvasHeight * scale;
+    canvas.style.width = `${cardWidth}px`;
+    canvas.style.height = `${canvasHeight}px`;
+    ctx.scale(scale, scale);
+
     ctx.fillStyle = '#141416';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, cardWidth, canvasHeight);
 
-    // 2. 双层赛博金/暗夜灰复古装饰线框
-    ctx.strokeStyle = '#d4af37'; // 华丽暗金
+    ctx.strokeStyle = '#d4af37';
     ctx.lineWidth = 2;
-    ctx.strokeRect(16, 16, canvas.width - 32, canvas.height - 32);
+    ctx.strokeRect(16, 16, cardWidth - 32, canvasHeight - 32);
 
     ctx.strokeStyle = '#2d2d31';
     ctx.lineWidth = 1;
-    ctx.strokeRect(22, 22, canvas.width - 44, canvas.height - 44);
+    ctx.strokeRect(22, 22, cardWidth - 44, canvasHeight - 44);
 
-    // 3. 渲染主标题
     ctx.fillStyle = '#d4af37';
-    ctx.font = 'bold 24px "PingFang SC", "Microsoft YaHei", sans-serif';
+    ctx.font = fonts.title;
     ctx.textAlign = 'center';
-    ctx.fillText('🔮 赛博解卦 · 天机报告', cardWidth / 2, padding + 25);
+    ctx.fillText(`${payload.divinationLabel} · ${payload.phaseLabel}`, cardWidth / 2, padding + 22);
 
-    // 标题下方的华丽渐变质感分割线
+    ctx.fillStyle = '#a1a1aa';
+    ctx.font = fonts.subtitle;
+    ctx.fillText(`AI 解卦报告 · ${payload.contextModeLabel}`, cardWidth / 2, padding + 50);
+
     ctx.strokeStyle = 'rgba(212, 175, 55, 0.25)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(padding, padding + 48);
-    ctx.lineTo(cardWidth - padding, padding + 48);
+    ctx.moveTo(padding, padding + 68);
+    ctx.lineTo(cardWidth - padding, padding + 68);
     ctx.stroke();
 
-    // 4. 绘制【推演分析】板块文字
     ctx.textAlign = 'left';
-    let y = analysisStartY;
+    sectionPositions.forEach(({ top, section }) => {
+        const style = sectionStyles[section.tone];
+        const boxX = padding - 12;
+        const boxY = top - 26;
+        const boxWidth = contentWidth + 24;
+        const boxHeight = section.height;
 
-    analysisLines.forEach(line => {
-        if (line === '【推演分析】') {
-            ctx.fillStyle = '#6366f1'; // 灵动星空霓虹蓝
-            ctx.font = 'bold 18px "PingFang SC", "Microsoft YaHei", sans-serif';
+        ctx.fillStyle = style.bg;
+        ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+
+        ctx.strokeStyle = style.border;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+        ctx.fillStyle = style.title;
+        ctx.font = fonts.sectionTitle;
+        ctx.fillText(`【${section.title}】`, padding, top);
+
+        ctx.fillStyle = style.body;
+        ctx.font = style.font;
+
+        let y = top + 34;
+        section.lines.forEach(line => {
             ctx.fillText(line, padding, y);
-            y += lineHeight + 6;
-        } else {
-            ctx.fillStyle = '#e4e4e7'; // 柔和护眼纯白
-            ctx.font = '15px "PingFang SC", "Microsoft YaHei", sans-serif';
-            ctx.fillText(line, padding, y);
-            y += lineHeight;
-        }
+            y += section.lineHeight;
+        });
     });
 
-    // 5. 绘制【断语结果】高亮背景卡片与极客绿文字
-    const resultBoxHeight = resultLines.length * lineHeight + 24;
-    ctx.fillStyle = 'rgba(16, 185, 129, 0.08)'; // 太极生机翠绿底色
-    ctx.fillRect(padding - 12, resultStartY - 20, contentWidth + 24, resultBoxHeight);
-
-    ctx.strokeStyle = 'rgba(16, 185, 129, 0.3)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(padding - 12, resultStartY - 20, contentWidth + 24, resultBoxHeight);
-
-    y = resultStartY;
-    resultLines.forEach(line => {
-        if (line === '【断语结果】') {
-            ctx.fillStyle = '#10b981'; // 纯正太极生机绿
-            ctx.font = 'bold 18px "PingFang SC", "Microsoft YaHei", sans-serif';
-            ctx.fillText(line, padding, y);
-            y += lineHeight + 6;
-        } else {
-            ctx.fillStyle = '#34d399'; // 明亮结论翠绿
-            ctx.font = '500 16px "PingFang SC", "Microsoft YaHei", sans-serif';
-            ctx.fillText(line, padding, y);
-            y += lineHeight;
-        }
-    });
-
-    // 6. 底部科技感水印
     ctx.fillStyle = '#52525b';
-    ctx.font = '12px monospace';
+    ctx.font = fonts.footer;
     ctx.textAlign = 'right';
-    ctx.fillText('Generated by AI Cyber Divination Assistant', cardWidth - padding, canvas.height - 24);
+    ctx.fillText(`Generated by AI Cyber Divination Assistant · ${getLocalDateStamp()}`, cardWidth - padding, canvasHeight - 24);
 
-    // 7. 唤起浏览器无损 PNG 纯净下载
     const dataUrl = canvas.toDataURL('image/png');
     const link = document.createElement('a');
-    link.download = `赛博断语报告_${new Date().toISOString().slice(0, 10)}.png`;
+    link.download = `${sanitizeFileName(payload.divinationLabel)}报告_${getLocalDateStamp()}.png`;
     link.href = dataUrl;
     link.click();
+};
+
+const createSessionFromSettings = (settings: AppSettings): ChatSession => {
+    return {
+        selectedDivinationType: settings.defaultDivinationType,
+        resolvedDivinationType: settings.defaultDivinationType === 'auto' ? 'general' : settings.defaultDivinationType,
+        contextMode: settings.contextMode,
+        phase: 'initial',
+        source: null,
+        memory: null,
+        initialQuestion: '',
+        forceInitial: false
+    };
 };
 
 export const MainPanel = {
@@ -160,56 +319,73 @@ export const MainPanel = {
     },
 
     bindEvents: (shadowRoot: ShadowRoot) => {
-        const toggleBtn = shadowRoot.getElementById('toggle-btn');
-        const mainPanel = shadowRoot.getElementById('main-panel');
+        const toggleBtn = shadowRoot.getElementById('toggle-btn') as HTMLElement;
+        const mainPanel = shadowRoot.getElementById('main-panel') as HTMLElement;
         const closeBtn = shadowRoot.getElementById('close-panel-btn');
+        const openSettingsBtn = shadowRoot.getElementById('open-settings-btn');
+        const restartAnalysisBtn = shadowRoot.getElementById('restart-analysis-btn');
+        const clearHistoryBtn = shadowRoot.getElementById('clear-history-btn');
 
-        const chatHistoryContainer = shadowRoot.getElementById('chat-history');
+        const chatHistoryContainer = shadowRoot.getElementById('chat-history') as HTMLElement;
         const questionInput = shadowRoot.getElementById('question-input') as any;
         const sendBtn = shadowRoot.getElementById('send-btn') as any;
 
         const extractDataBtn = shadowRoot.getElementById('extract-data-btn') as any;
-        const dataStatus = shadowRoot.getElementById('data-status');
+        const dataStatus = shadowRoot.getElementById('data-status') as HTMLElement;
+        const divinationTypeSelect = shadowRoot.getElementById('divination-type-select') as any;
+        const contextModeSelect = shadowRoot.getElementById('context-mode-select') as any;
+        const resolvedTypeBadge = shadowRoot.getElementById('resolved-type-badge') as HTMLElement;
+        const phaseBadge = shadowRoot.getElementById('phase-badge') as HTMLElement;
+        const detectionBadge = shadowRoot.getElementById('detection-badge') as HTMLElement;
 
-        let currentHtmlContent = "";
+        let currentHistory: ChatMessage[] = [];
+        let currentSession = createSessionFromSettings(Store.getSettings());
+        let activeRequestController: AbortController | null = null;
 
-        // 面板开启与隐藏
-        toggleBtn?.addEventListener('click', () => {
-            mainPanel!.style.display = 'flex';
-            toggleBtn.style.display = 'none';
-        });
-        closeBtn?.addEventListener('click', () => {
-            mainPanel!.style.display = 'none';
-            toggleBtn!.style.display = '';
-        });
-
-        // 排盘网页数据提取器
-        extractDataBtn?.addEventListener('click', () => {
-            extractDataBtn.loading = true;
-            try {
-                currentHtmlContent = PageScraper.extractPaipanData();
-                extractDataBtn.variant = "success";
-                dataStatus!.style.display = 'inline-block';
-                dataStatus!.textContent = `已就绪 (${currentHtmlContent.length}字) ✓`;
-            } catch (err) {
-                Logger.error("抓取失败", err);
-                dataStatus!.style.display = 'inline-block';
-                dataStatus!.style.color = 'var(--sl-color-danger-600)';
-                dataStatus!.textContent = '抓取失败 ❌';
-            } finally {
-                extractDataBtn.loading = false;
-            }
-        });
-
-        const scrollToBottom = () => {
-            if (chatHistoryContainer) {
-                setTimeout(() => {
-                    chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
-                }, 50);
-            }
+        const setSendButtonState = (isSending: boolean) => {
+            sendBtn.loading = false;
+            sendBtn.disabled = false;
+            sendBtn.variant = isSending ? 'danger' : 'primary';
+            sendBtn.innerHTML = `
+                <sl-icon name="${isSending ? 'stop-circle' : 'send'}" slot="prefix"></sl-icon>
+                ${isSending ? '停止' : '发送'}
+            `;
         };
 
-        const appendMessage = (role: 'user' | 'ai', content: string): HTMLElement => {
+        const syncSessionResolution = () => {
+            const detectedType = currentSession.source?.detectedType || 'general';
+            currentSession.resolvedDivinationType = resolveDivinationType(currentSession.selectedDivinationType, detectedType);
+        };
+
+        const setDataStatus = (text: string, tone: 'default' | 'success' | 'warning' | 'danger' = 'default') => {
+            dataStatus.style.display = 'inline-block';
+            dataStatus.textContent = text;
+            dataStatus.style.color =
+                tone === 'success'
+                    ? 'var(--sl-color-success-500)'
+                    : tone === 'warning'
+                        ? 'var(--sl-color-warning-500)'
+                        : tone === 'danger'
+                            ? 'var(--sl-color-danger-500)'
+                            : '#888';
+        };
+
+        const clearChatView = () => {
+            chatHistoryContainer.innerHTML = WELCOME_MESSAGE_HTML;
+        };
+
+        const scrollToBottom = () => {
+            setTimeout(() => {
+                chatHistoryContainer.scrollTop = chatHistoryContainer.scrollHeight;
+            }, 50);
+        };
+
+        const appendMessage = (role: 'user' | 'ai', content: string, options?: { html?: boolean }) => {
+            const welcome = chatHistoryContainer.querySelector('.welcome-message');
+            if (welcome) {
+                welcome.remove();
+            }
+
             const msgDiv = document.createElement('div');
             msgDiv.className = `message ${role}-message`;
             const avatar = role === 'user'
@@ -218,69 +394,163 @@ export const MainPanel = {
                        <sl-icon name="cpu" style="font-size: 18px;"></sl-icon>
                    </div>`;
 
+            const bubbleContent = options?.html ? content : safeMultilineHtml(content);
+
             msgDiv.innerHTML = `
                 ${role === 'ai' ? avatar : ''}
-                <div class="msg-bubble">${content}</div>
+                <div class="msg-bubble">${bubbleContent}</div>
             `;
 
-            chatHistoryContainer!.appendChild(msgDiv);
+            chatHistoryContainer.appendChild(msgDiv);
             scrollToBottom();
             return msgDiv;
         };
 
-        const handleSend = async () => {
-            const question = questionInput.value.trim();
-            if (!question) return;
+        const appendNote = (content: string) => {
+            appendMessage('ai', `<div class="note-bubble">${safeMultilineHtml(content)}</div>`, { html: true });
+        };
 
-            if (!currentHtmlContent) {
-                Logger.info('用户未手动抓取，触发自动抓取...');
-                currentHtmlContent = PageScraper.extractPaipanData();
-                dataStatus!.style.display = 'inline-block';
-                dataStatus!.textContent = `自动抓取 (${currentHtmlContent.length}字) ✓`;
+        const updateSessionBadges = () => {
+            syncSessionResolution();
+            divinationTypeSelect.value = currentSession.selectedDivinationType;
+            contextModeSelect.value = currentSession.contextMode;
+
+            const resolvedLabel = DivinationTypeLabels[currentSession.resolvedDivinationType];
+            const typeModeLabel = currentSession.selectedDivinationType === 'auto' ? '自动' : '手动';
+            resolvedTypeBadge.textContent = `当前术数：${resolvedLabel}（${typeModeLabel}）`;
+
+            const effectivePhase: SessionPhase = currentSession.forceInitial ? 'initial' : currentSession.phase;
+            phaseBadge.textContent = `当前阶段：${SessionPhaseLabels[effectivePhase]}`;
+
+            if (currentSession.source) {
+                const detectedLabel = DivinationTypeLabels[currentSession.source.detectedType];
+                detectionBadge.textContent = `识别结果：${detectedLabel}`;
+                detectionBadge.title = currentSession.source.detectionReason;
+            } else {
+                detectionBadge.textContent = '识别结果：尚未抓取';
+                detectionBadge.title = '';
+            }
+        };
+
+        const updateDataStatusFromSession = () => {
+            if (!currentSession.source) {
+                setDataStatus('点击“抓取数据”获取当前页面排盘信息');
+                return;
             }
 
-            appendMessage('user', question);
-            questionInput.value = '';
+            const source = currentSession.source;
+            const detectedLabel = DivinationTypeLabels[source.detectedType];
+            const resolvedLabel = DivinationTypeLabels[currentSession.resolvedDivinationType];
+            setDataStatus(
+                `已抓取 ${source.cleanedText.length} 字，识别为 ${detectedLabel}，当前按 ${resolvedLabel} 处理`,
+                'success'
+            );
+            dataStatus.title = `${source.detectionReason}；${ContextModeHints[currentSession.contextMode]}`;
+        };
 
-            sendBtn.disabled = true;
-            sendBtn.loading = true;
-            questionInput.disabled = true;
+        const resetConversation = (preserveSource: boolean, note?: string) => {
+            currentHistory = [];
+            currentSession.memory = null;
+            currentSession.phase = 'initial';
+            currentSession.initialQuestion = '';
+            currentSession.forceInitial = false;
 
-            const aiMsgDiv = appendMessage('ai', `<sl-spinner></sl-spinner> <span style="margin-left: 8px;">正在推演天机...</span>`);
-            const bubble = aiMsgDiv.querySelector('.msg-bubble') as HTMLElement;
+            if (!preserveSource) {
+                currentSession.source = null;
+            }
 
-            try {
-                const settings = Store.getSettings();
-                const res = await AIRequestService.execute(question, currentHtmlContent, currentHistory, settings);
+            syncSessionResolution();
+            clearChatView();
+            updateSessionBadges();
+            updateDataStatusFromSession();
 
-                // 🌟 防御性编程：强制转换为字符串并提供兜底默认值，彻底杜绝 replace is not a function 报错
-                const safeAnalysis = String(res.分析过程 || "（AI未返回详细的推演过程，请看最终断语）");
-                const safeResult = String(res.结果 || "（AI未能按标准格式返回断语结果）");
+            if (note) {
+                appendNote(note);
+            }
+        };
 
-                // 🌟 更新 UI 排版：调用安全字符串进行渲染
-                bubble.innerHTML = `
-                    <div style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
-                        <div style="color: var(--sl-color-neutral-700); font-size: 0.95em;">
-                            <div style="display: flex; align-items: center; gap: 6px; color: var(--sl-color-primary-600); font-weight: 600; margin-bottom: 8px;">
+        const confirmResetIfNeeded = (message: string): boolean => {
+            if (!currentHistory.length && !currentSession.memory && !currentSession.initialQuestion) {
+                return true;
+            }
+            return window.confirm(message);
+        };
+
+        const applySource = (source: ScrapedSource, askConfirm: boolean): boolean => {
+            if (askConfirm && !confirmResetIfNeeded('重新抓取盘面会清空当前会话记录，并以新盘面重新开始。是否继续？')) {
+                return false;
+            }
+
+            currentSession.source = source;
+            currentSession.memory = null;
+            currentSession.phase = 'initial';
+            currentSession.forceInitial = false;
+            currentSession.initialQuestion = '';
+            currentHistory = [];
+            syncSessionResolution();
+            clearChatView();
+            updateSessionBadges();
+            updateDataStatusFromSession();
+
+            appendNote(
+                `盘面已抓取完成。\n自动识别：${DivinationTypeLabels[source.detectedType]}\n当前解析：${DivinationTypeLabels[currentSession.resolvedDivinationType]}\n识别依据：${source.detectionReason}`
+            );
+            return true;
+        };
+
+        const renderAIResult = (result: AIResult, phase: SessionPhase): { html: string; plainText: string } => {
+            const safeAnalysis = formatAIValue(result.分析过程, '（AI 未返回详细的推演过程，请看最终断语）');
+            const safeResult = formatAIValue(result.结果, '（AI 未能按标准格式返回断语结果）');
+            const basisList = normalizeBasis(result.盘面依据);
+            const resolvedLabel = DivinationTypeLabels[currentSession.resolvedDivinationType];
+            const phaseLabel = SessionPhaseLabels[phase];
+            const basisHtml = basisList.length > 0
+                ? `
+                    <div class="ai-result-basis">
+                        <div class="ai-result-title">
+                            <sl-icon name="journal-text"></sl-icon>
+                            <span>盘面依据</span>
+                        </div>
+                        <ul>${basisList.map(item => `<li>${safeMultilineHtml(item)}</li>`).join('')}</ul>
+                    </div>
+                `
+                : '';
+            const plainText = [
+                `【${resolvedLabel} · ${phaseLabel}】`,
+                `【推演分析】\n${safeAnalysis}`,
+                `【断语结果】\n${safeResult}`,
+                basisList.length > 0 ? `【盘面依据】\n${basisList.join('\n')}` : ''
+            ].filter(Boolean).join('\n\n');
+
+            return {
+                plainText,
+                html: `
+                    <div class="ai-result-card">
+                        <div class="ai-result-meta">
+                            <span class="result-chip">${resolvedLabel}</span>
+                            <span class="result-chip">${phaseLabel}</span>
+                            <span class="result-chip">${ContextModeLabels[currentSession.contextMode]}</span>
+                        </div>
+
+                        <div class="ai-result-section">
+                            <div class="ai-result-title">
                                 <sl-icon name="compass"></sl-icon>
                                 <span>推演分析</span>
                             </div>
-                            <div style="padding-left: 10px; border-left: 3px solid var(--sl-color-primary-200); line-height: 1.6; text-align: justify;">
-                                ${safeAnalysis.replace(/\n/g, '<br>')}
-                            </div>
+                            <div class="ai-result-content">${safeMultilineHtml(safeAnalysis)}</div>
                         </div>
 
-                        <div style="background-color: var(--sl-color-success-50); border: 1px solid var(--sl-color-success-200); border-radius: 8px; padding: 12px; margin-top: 4px;">
-                            <div style="display: flex; align-items: center; gap: 6px; color: var(--sl-color-success-700); font-weight: 600; margin-bottom: 6px;">
+                        <div class="ai-result-primary">
+                            <div class="ai-result-title">
                                 <sl-icon name="check-circle-fill"></sl-icon>
                                 <span>断语结果</span>
                             </div>
-                            <div style="color: var(--sl-color-success-900); line-height: 1.6; font-size: 1em; font-weight: 500;">
-                                ${safeResult.replace(/\n/g, '<br>')}
-                            </div>
+                            <div class="ai-result-content">${safeMultilineHtml(safeResult)}</div>
                         </div>
 
-                        <div style="display: flex; justify-content: flex-start; gap: 12px; margin-top: 4px; border-top: 1px dashed var(--sl-color-neutral-200); padding-top: 8px;">
+                        ${basisHtml}
+
+                        <div class="ai-result-actions">
                             <sl-button size="small" variant="text" class="copy-report-btn" style="padding: 0; --sl-spacing-x-small: 4px;">
                                 <sl-icon name="copy" slot="prefix"></sl-icon>
                                 <span class="copy-text">复制报告</span>
@@ -291,14 +561,194 @@ export const MainPanel = {
                             </sl-button>
                         </div>
                     </div>
-                `;
+                `
+            };
+        };
+
+        const syncSessionDefaultsIfIdle = (settings: AppSettings) => {
+            if (currentHistory.length || currentSession.source || currentSession.memory || currentSession.initialQuestion) {
+                return;
+            }
+
+            currentSession = createSessionFromSettings(settings);
+            updateSessionBadges();
+            updateDataStatusFromSession();
+        };
+
+        toggleBtn?.addEventListener('click', () => {
+            mainPanel.style.display = 'flex';
+            toggleBtn.style.display = 'none';
+        });
+
+        closeBtn?.addEventListener('click', () => {
+            mainPanel.style.display = 'none';
+            toggleBtn.style.display = '';
+        });
+
+        extractDataBtn?.addEventListener('click', () => {
+            extractDataBtn.loading = true;
+            try {
+                const source = PageScraper.extractPaipanData();
+                if (applySource(source, true)) {
+                    extractDataBtn.variant = 'success';
+                }
+            } catch (err) {
+                Logger.error('抓取失败', err);
+                setDataStatus('抓取失败 ❌', 'danger');
+            } finally {
+                extractDataBtn.loading = false;
+            }
+        });
+
+        clearHistoryBtn?.addEventListener('click', () => {
+            if (!currentSession.source && !currentHistory.length) {
+                appendNote('当前还没有可清空的对话记录。');
+                return;
+            }
+
+            resetConversation(
+                true,
+                currentSession.source
+                    ? '已清空当前对话，保留当前盘面。你可以直接重新发起首问分析。'
+                    : '已清空当前对话。'
+            );
+        });
+
+        restartAnalysisBtn?.addEventListener('click', () => {
+            if (!currentSession.source) {
+                appendNote('请先抓取盘面数据，再重新完整分析。');
+                return;
+            }
+
+            if (!confirmResetIfNeeded('重新完整分析会清空当前追问上下文，并回到首问分析模式。是否继续？')) {
+                return;
+            }
+
+            currentHistory = [];
+            currentSession.memory = null;
+            currentSession.phase = 'initial';
+            currentSession.initialQuestion = '';
+            currentSession.forceInitial = true;
+            clearChatView();
+            updateSessionBadges();
+            updateDataStatusFromSession();
+            appendNote('已切回首问分析模式，当前盘面已保留。请输入新的完整问题。');
+        });
+
+        divinationTypeSelect?.addEventListener('sl-change', () => {
+            const nextType = divinationTypeSelect.value as DivinationType;
+            const previousType = currentSession.selectedDivinationType;
+
+            if (nextType === previousType) return;
+
+            if (currentSession.source && !confirmResetIfNeeded('切换术数类型会按新的术数模板重新开始当前盘面的会话。是否继续？')) {
+                divinationTypeSelect.value = previousType;
+                return;
+            }
+
+            currentSession.selectedDivinationType = nextType;
+            syncSessionResolution();
+
+            if (currentSession.source && (currentHistory.length || currentSession.memory || currentSession.initialQuestion)) {
+                resetConversation(true, `已切换术数类型为 ${DivinationTypeLabels[currentSession.resolvedDivinationType]}，请重新发起首问分析。`);
+            } else {
+                updateSessionBadges();
+                updateDataStatusFromSession();
+            }
+        });
+
+        contextModeSelect?.addEventListener('sl-change', () => {
+            currentSession.contextMode = contextModeSelect.value as ContextMode;
+            updateSessionBadges();
+            updateDataStatusFromSession();
+            appendNote(`上下文模式已切换为 ${ContextModeLabels[currentSession.contextMode]}。下一轮请求将按新模式组装上下文。`);
+        });
+
+        window.addEventListener('ai-gua-settings-saved', (event: Event) => {
+            const detail = (event as CustomEvent<AppSettings>).detail;
+            if (!detail) return;
+            syncSessionDefaultsIfIdle(detail);
+        });
+
+        const handleSend = async () => {
+            if (activeRequestController) {
+                return;
+            }
+
+            const question = questionInput.value.trim();
+            if (!question) return;
+
+            const settings = Store.getSettings();
+            const missingFields = Store.getMissingSettingsFields(settings);
+
+            if (missingFields.length > 0) {
+                const missingLabels = missingFields.map((field) => SETTINGS_FIELD_LABELS[field]).join('、');
+                setDataStatus(`请先完成本地配置：${missingLabels}`, 'warning');
+                appendNote(`请先在设置中补全：${missingLabels}。保存后会自动保存在本地，下次无需重复输入。`);
+                openSettingsBtn?.dispatchEvent(new Event('click'));
+                questionInput.focus();
+                return;
+            }
+
+            if (!currentSession.source) {
+                Logger.info('用户未手动抓取，触发自动抓取...');
+                const source = PageScraper.extractPaipanData();
+                if (!applySource(source, false)) {
+                    return;
+                }
+            }
+
+            if (currentSession.phase === 'followup' && shouldRestartFullAnalysis(question)) {
+                currentHistory = [];
+                currentSession.memory = null;
+                currentSession.phase = 'initial';
+                currentSession.initialQuestion = '';
+                currentSession.forceInitial = true;
+                updateSessionBadges();
+                updateDataStatusFromSession();
+                appendNote('检测到你这次问题更像是“重新完整分析”，本轮将按首问分析模式重新处理当前盘面。');
+            }
+
+            appendMessage('user', question);
+            questionInput.value = '';
+
+            const requestController = new AbortController();
+            activeRequestController = requestController;
+            setSendButtonState(true);
+            questionInput.disabled = true;
+
+            const aiMsgDiv = appendMessage('ai', `<sl-spinner></sl-spinner> <span style="margin-left: 8px;">正在推演天机...</span>`, { html: true });
+            const bubble = aiMsgDiv.querySelector('.msg-bubble') as HTMLElement;
+            const requestPhase: SessionPhase = currentSession.forceInitial ? 'initial' : currentSession.phase;
+
+            try {
+                const res = await AIRequestService.execute({
+                    question,
+                    history: currentHistory,
+                    settings,
+                    session: currentSession,
+                    signal: requestController.signal
+                });
+
+                const rendered = renderAIResult(res, requestPhase);
+                const exportPayload: ExportReportPayload = {
+                    divinationLabel: DivinationTypeLabels[currentSession.resolvedDivinationType],
+                    phaseLabel: SessionPhaseLabels[requestPhase],
+                    contextModeLabel: ContextModeLabels[currentSession.contextMode],
+                    question,
+                    sourceTitle: currentSession.source?.title,
+                    sourceUrl: currentSession.source?.url,
+                    analysis: formatAIValue(res.分析过程, '（AI 未返回详细分析过程）'),
+                    result: formatAIValue(res.结果, '（AI 未返回断语结果）'),
+                    basisList: normalizeBasis(res.盘面依据)
+                };
+                bubble.innerHTML = rendered.html;
 
                 const copyBtn = bubble.querySelector('.copy-report-btn') as any;
                 const exportBtn = bubble.querySelector('.export-report-btn') as any;
 
                 copyBtn?.addEventListener('click', () => {
-                    const plainText = `【推演分析】\n${safeAnalysis}\n\n【断语结果】\n${safeResult}`;
-                    navigator.clipboard.writeText(plainText).then(() => {
+                    navigator.clipboard.writeText(rendered.plainText).then(() => {
                         const icon = copyBtn.querySelector('sl-icon');
                         const textSpan = copyBtn.querySelector('.copy-text');
                         if (icon) icon.name = 'check-lg';
@@ -316,42 +766,70 @@ export const MainPanel = {
                 exportBtn?.addEventListener('click', () => {
                     exportBtn.loading = true;
                     try {
-                        // 🌟 使用安全字符串传递给导出图片的函数
-                        drawAndExportImage(safeAnalysis, safeResult);
+                        drawAndExportImage(exportPayload);
                     } catch (err) {
-                        Logger.error("导出分享图失败", err);
+                        Logger.error('导出分享图失败', err);
                     } finally {
                         exportBtn.loading = false;
                     }
                 });
 
-                currentHistory.push({
-                    id: Date.now(),
-                    question: question,
-                    result: res
-                });
+                if (requestPhase === 'initial') {
+                    currentSession.initialQuestion = question;
+                }
 
+                currentSession.memory = res.会话记忆 || currentSession.memory;
+                currentSession.phase = 'followup';
+                currentSession.forceInitial = false;
+                currentHistory = [
+                    ...currentHistory,
+                    {
+                        id: Date.now(),
+                        phase: requestPhase,
+                        divinationType: currentSession.resolvedDivinationType,
+                        question,
+                        result: res
+                    }
+                ].slice(-settings.maxHistory);
+                updateSessionBadges();
+                updateDataStatusFromSession();
             } catch (error: any) {
-                Logger.error("请求失败", error);
-                bubble.innerHTML = `<span style="color: var(--sl-color-danger-600);"><sl-icon name="exclamation-triangle"></sl-icon> 推演失败：<br>${error.message}</span>`;
+                Logger.error('请求失败', error);
+                const message = String(error.message || '未知错误');
+                questionInput.value = question;
+                bubble.innerHTML = message === '请求已取消'
+                    ? '<span style="color: var(--sl-color-warning-400);"><sl-icon name="stop-circle"></sl-icon> 已停止本次推演，可修改问题后重试。</span>'
+                    : `<span style="color: var(--sl-color-danger-400);"><sl-icon name="exclamation-triangle"></sl-icon> 推演失败：<br>${safeMultilineHtml(message)}</span>`;
             } finally {
-                sendBtn.disabled = false;
-                sendBtn.loading = false;
+                if (activeRequestController === requestController) {
+                    activeRequestController = null;
+                }
+                setSendButtonState(false);
                 questionInput.disabled = false;
                 questionInput.focus();
                 scrollToBottom();
             }
         };
 
-        sendBtn?.addEventListener('click', handleSend);
+        sendBtn?.addEventListener('click', () => {
+            if (activeRequestController) {
+                activeRequestController.abort();
+                return;
+            }
+
+            handleSend();
+        });
 
         questionInput?.addEventListener('keydown', (e: KeyboardEvent) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                if (!sendBtn.loading) {
+                if (!activeRequestController) {
                     handleSend();
                 }
             }
         });
+
+        updateSessionBadges();
+        updateDataStatusFromSession();
     }
 };

@@ -1,0 +1,105 @@
+.prompt-settings-dialog {
+    --width: min(960px, calc(100vw - 32px));
+}
+
+.prompt-settings-dialog::part(panel) {
+    height: min(860px, calc(100vh - 32px));
+    max-height: calc(100vh - 32px);
+    display: flex;
+    flex-direction: column;
+}
+
+.prompt-settings-dialog::part(body) {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.prompt-settings-dialog::part(footer) {
+    flex: 0 0 auto;
+    border-top: 1px solid var(--sl-color-neutral-200);
+}
+
+.prompt-settings-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 0;
+    padding-right: 6px;
+}
+
+.prompt-settings-intro {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--sl-color-primary-50);
+    border: 1px solid var(--sl-color-primary-200);
+    color: var(--sl-color-primary-700);
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+
+.prompt-settings-intro sl-icon {
+    font-size: 1rem;
+    margin-top: 2px;
+    color: var(--sl-color-primary-500);
+}
+
+.prompt-settings-toolbar {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.prompt-fields {
+    display: grid;
+    gap: 14px;
+    padding: 14px 2px 2px;
+}
+
+.prompt-fields sl-textarea {
+    width: 100%;
+}
+
+.prompt-fields sl-textarea::part(textarea) {
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+sl-details::part(base) {
+    border: 1px solid var(--sl-color-neutral-200);
+    border-radius: 10px;
+    background: var(--sl-color-neutral-0);
+}
+
+sl-details::part(summary) {
+    font-weight: 600;
+}
+
+.dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+@media (max-width: 720px) {
+    .prompt-settings-dialog {
+        --width: calc(100vw - 16px);
+    }
+
+    .prompt-settings-dialog::part(panel) {
+        height: calc(100vh - 16px);
+        max-height: calc(100vh - 16px);
+    }
+
+    .dialog-footer {
+        flex-wrap: wrap;
+    }
+
+    .dialog-footer sl-button {
+        flex: 1 1 160px;
+    }
+}

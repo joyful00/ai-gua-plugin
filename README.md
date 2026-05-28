@@ -1,158 +1,169 @@
 # AI 赛博解卦助手
 
-一个基于 AI 的八字排盘解卦浏览器插件，支持在排盘网站上直接调用 AI 进行卦象分析和运势解读。
+一个面向 china95 排盘页面的浏览器用户脚本。它会在排盘页面右下角注入 AI 解卦面板，支持自动抓取盘面、识别术数类型、调用 OpenAI 兼容接口进行首问分析与后续追问，并可复制或导出分析报告图片。
 
-## 功能特性
+## 当前能力
 
-- 🔮 **智能解卦** - 基于传统玄学理论，AI 智能分析排盘数据
-- 💬 **对话交互** - 支持多轮对话，可追问细节
-- 📊 **数据抓取** - 自动抓取当前页面的排盘信息
-- ⚙️ **灵活配置** - 支持自定义 API 地址、模型、密钥
-- 🌙 **深色主题** - 精美的深色 UI 设计
-- 🔒 **本地存储** - 配置安全保存在本地
+- 自动抓取当前排盘页面的标题、地址和盘面正文。
+- 根据 URL 与页面关键词识别术数类型，支持自动识别和手动切换。
+- 区分“首问分析”和“后续追问”，避免每次追问都重复完整起盘。
+- 支持智能、强关联、完整原盘三种上下文模式。
+- 支持按术数单独配置 Prompt 模板。
+- 支持复制报告、导出图片报告。
+- 支持请求超时兜底、手动停止本次请求和失败后快速重试。
+- 配置保存在用户脚本管理器本地存储中，不内置任何 API Key。
 
-## 安装方法
+## 支持页面
 
-### 前置要求
+脚本默认匹配以下站点：
 
-1. 安装浏览器扩展：[Tampermonkey](https://www.tampermonkey.net/) 或 [Violentmonkey](https://violentmonkey.github.io/)
-2. 安装 Node.js 和 pnpm
+- `https://www.china95.net/paipan/*`
+- `https://paipan.china95.net/*`
 
-### 构建步骤
+已配置识别规则的 china95 页面：
+
+| 术数 | 页面 |
+| --- | --- |
+| 八字 | `/paipan/bazi/bazi_show.asp`、`/BaZi/BaZi.asp` |
+| 紫微斗数 | `/paipan/ziwei/ziwei.asp`、`/ZiDou/ZiDou.asp` |
+| 六爻 | `/paipan/liuyao/liuyao.asp`、`/LiuYao/LiuYao.asp` |
+| 奇门遁甲 | `/paipan/qimen/qimen.asp`、`/paipan/qimen_show.asp`、`/QiMen/QiMen.asp` |
+| 梅花易数 | `/paipan/meihua_show.asp` |
+| 飞宫小奇门 | `/paipan/xiaoqimen_show.asp` |
+| 小成图 | `/paipan/xiaochengtu_show.asp` |
+| 大六壬 | `/DaLiuRen/DaLiuRen.asp` |
+| 金口诀 | `/paipan/jinkoujue_show.asp`、`/JinKouJue/JinKouJue.asp` |
+| 玄空风水 | `/XuanKong/XuanKong.asp` |
+
+未命中规则但仍在 china95 排盘路径下的页面，会回退为“通用问事”处理。
+
+## 安装使用
+
+### 环境要求
+
+- Node.js
+- pnpm
+- Tampermonkey 或 Violentmonkey
+
+### 构建脚本
 
 ```bash
-# 克隆项目
-git clone <repository-url>
-cd ai-gua-plugin
-
-# 安装依赖
 pnpm install
-
-# 构建生产版本
 pnpm build
 ```
 
-构建完成后，在 `dist/` 目录下会生成 `ai-gua-plugin.user.js` 文件。
+构建产物位于 `dist/ai-gua-plugin.user.js`。
 
-### 安装脚本
+### 安装到浏览器
 
-1. 打开 Tampermonkey 扩展管理页面
-2. 点击"添加新脚本"
-3. 将 `dist/ai-gua-plugin.user.js` 的内容粘贴进去
-4. 保存即可
+1. 打开 Tampermonkey 或 Violentmonkey 管理页面。
+2. 新建用户脚本。
+3. 将 `dist/ai-gua-plugin.user.js` 内容粘贴进去并保存。
+4. 打开支持的排盘页面，右下角会出现浮动按钮。
 
-## 使用说明
+## 基本流程
 
-### 基本使用
+1. 打开支持的排盘页面。
+2. 点击右下角浮动按钮打开面板。
+3. 首次使用先进入设置，填写 API 地址、API Key 和模型名。
+4. 点击“抓取数据”，确认识别到的术数类型。
+5. 输入问题并发送。
+6. 首轮回答后，可继续追问、复制报告或导出图片。
 
-1. 访问支持的排盘网站：
-   - `https://www.china95.net/paipan/*`
-   - `https://paipan.china95.net/*`
+如果请求时间过长，可以点击发送按钮切换出来的“停止”按钮取消本次请求。取消或失败后，原问题会回填到输入框，方便修改后重试。
 
-2. 页面右下角会出现一个蓝色的浮动按钮
+## API 配置
 
-3. 点击按钮打开 AI 解卦面板
-
-4. 点击"抓取数据"获取当前页面的排盘信息
-
-5. 在输入框中输入您的问题，点击发送
-
-### 配置 API
-
-首次使用需要配置 API：
-
-1. 点击面板右上角的 ⚙️ 设置按钮
-
-2. 填写以下配置：
+当前稳定支持 OpenAI 兼容格式接口。
 
 | 配置项 | 说明 | 示例 |
-|--------|------|------|
-| API 规范 | 接口格式类型 | OpenAI 兼容格式 |
-| API 地址 | 后端服务地址 | `https://api.openai.com/v1` |
-| API Key | 密钥 | `sk-xxx...` |
-| 模型名称 | 使用的模型 | `gpt-4o` |
-| 历史记录数 | 上下文保留条数 | `30` |
+| --- | --- | --- |
+| API 规范 | 当前建议选择 OpenAI 兼容格式 | `OpenAI 兼容格式` |
+| API 地址 | OpenAI 兼容接口地址，可填 `/v1` 或完整 `/chat/completions` | `https://api.openai.com/v1` |
+| API Key | 服务商提供的密钥 | `sk-...` |
+| 模型名称 | 具体模型名 | `gpt-4o`、`deepseek-chat` |
+| 历史记录数 | 保留用于追问上下文的历史轮数 | `30` |
+| 默认术数类型 | 默认自动识别，也可固定某类术数 | `自动识别` |
+| 默认上下文模式 | 控制每轮发送给模型的盘面长度 | `智能模式` |
 
-3. 点击"保存配置"
+### 上下文模式
 
-### 支持的 API 服务
+| 模式 | 适用场景 |
+| --- | --- |
+| 智能模式 | 默认推荐，发送摘要和关键片段，速度较快 |
+| 强关联模式 | 需要更强盘面锚定时使用，会发送更多原文 |
+| 完整原盘模式 | 排查遗漏信息或需要完整上下文时使用，消耗更多 token |
 
-本插件支持 OpenAI 兼容格式的各类 API 服务：
+## Prompt 配置
 
-- OpenAI 官方 API
-- DeepSeek
-- 通义千问
-- 智谱 AI
-- 各类中转站服务
+设置页中可以打开“高级 Prompt 配置”，为每种术数分别维护两套模板：
 
-## 技术栈
+- 首问分析：用于第一次完整分析当前盘面。
+- 后续追问：用于基于已有盘面记忆回答追问。
 
-| 技术 | 版本 | 用途 |
-|------|------|------|
-| [Vite](https://vitejs.dev/) | ^8.0.12 | 构建工具 |
-| [TypeScript](https://www.typescriptlang.org/) | ~6.0.2 | 开发语言 |
-| [vite-plugin-monkey](https://github.com/lisonge/vite-plugin-monkey) | ^8.0.5 | 油猴脚本打包 |
-| [Shoelace](https://shoelace.style/) | ^2.20.1 | UI 组件库 |
+保存后的 Prompt 会写入本地设置，并立即影响后续请求。也可以一键恢复默认模板。
 
-## 项目结构
-
-```
-ai-gua-plugin/
-├── src/
-│   ├── main.ts                 # 入口文件
-│   ├── ui/                     # UI 组件层
-│   │   ├── index.ts            # UI 管理器
-│   │   ├── views/
-│   │   │   └── main-panel/     # 主面板（聊天界面）
-│   │   └── components/
-│   │       └── settings-dialog/ # 设置弹窗
-│   ├── api/                    # API 服务层
-│   │   ├── index.ts            # 统一请求入口
-│   │   └── openai-style.ts     # OpenAI 风格适配器
-│   ├── store/                  # 状态管理
-│   │   └── index.ts            # 本地存储
-│   ├── types/                  # 类型定义
-│   │   └── index.ts            # TypeScript 类型
-│   └── utils/                  # 工具函数
-│       ├── config.ts           # 配置管理
-│       └── logger.ts           # 日志工具
-├── dist/                       # 构建输出
-├── package.json
-├── vite.config.ts
-└── tsconfig.json
-```
-
-## 开发指南
-
-### 开发模式
+## 开发命令
 
 ```bash
 pnpm dev
+pnpm build
+pnpm preview
 ```
 
-### 构建
+## 项目结构
+
+```text
+ai-gua-plugin/
+├── src/
+│   ├── main.ts
+│   ├── api/
+│   │   ├── index.ts
+│   │   ├── openai-style.ts
+│   │   └── prompts.ts
+│   ├── store/
+│   │   └── index.ts
+│   ├── types/
+│   │   └── index.ts
+│   ├── ui/
+│   │   ├── index.ts
+│   │   ├── components/
+│   │   │   ├── settings-dialog/
+│   │   │   └── prompt-settings-dialog/
+│   │   └── views/
+│   │       └── main-panel/
+│   └── utils/
+│       ├── divination.ts
+│       ├── logger.ts
+│       └── scraper.ts
+├── dist/
+├── package.json
+├── tsconfig.json
+└── vite.config.ts
+```
+
+## 隐私与安全
+
+- API Key 保存在用户脚本管理器本地存储中，请不要把包含个人配置的脚本或浏览器配置分享给他人。
+- 盘面数据、问题和对话上下文会发送给你配置的 API 服务商。
+- 如果使用第三方中转服务，请自行确认其隐私策略、日志策略和可用性。
+
+## 已知限制
+
+- 当前只实现了 OpenAI 兼容格式请求适配。
+- Gemini 原生格式和 Anthropic 格式还未接入底层 provider。
+- 自动识别依赖已配置 URL 和页面关键词，未收录页面会回退到“通用问事”。
+- 图片导出使用 Canvas 绘制报告摘要，不是对原始排盘网页截图。
+
+## 发布状态
+
+当前目标版本：`0.0.1`。
+
+发布前建议至少完成一次：
 
 ```bash
 pnpm build
 ```
-
-### 预览
-
-```bash
-pnpm preview
-```
-
-## 注意事项
-
-1. **API Key 安全** - 请勿将包含 API Key 的脚本分享给他人
-
-2. **网络请求** - 插件通过 `GM_xmlhttpRequest` 跨域请求，请确保目标 API 允许跨域
-
-3. **数据隐私** - 排盘数据和对话内容会发送到配置的 API 服务，请注意隐私保护
-
-## 许可证
-
-MIT License
 
 ## 作者
 

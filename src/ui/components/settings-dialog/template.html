@@ -1,4 +1,4 @@
-<sl-dialog id="settings-dialog" label="API 配置" class="settings-dialog">
+<sl-dialog id="settings-dialog" label="AI 配置" class="settings-dialog">
     <div class="settings-content">
         <div class="settings-section">
             <div class="section-title">
@@ -6,25 +6,22 @@
                 <span>接口设置</span>
             </div>
             <div class="section-body">
-                <sl-select id="set-api-format" label="API 规范" value="openai" hoist>
+                <sl-select id="set-api-format" label="API 规范" value="openai" help-text="首版仅支持 OpenAI 兼容格式" hoist>
                     <sl-option value="openai">OpenAI 兼容格式</sl-option>
-                    <sl-option value="gemini">Gemini 原生格式</sl-option>
-                    <sl-option value="anthropic">Anthropic 格式</sl-option>
                 </sl-select>
-                <sl-divider></sl-divider>
-                <sl-input 
-                    id="set-base-url" 
-                    label="API 地址" 
+                <sl-input
+                    id="set-base-url"
+                    label="API 地址"
                     placeholder="https://api.openai.com/v1"
                     clearable
                 >
                     <sl-icon name="globe" slot="prefix"></sl-icon>
                 </sl-input>
-                <sl-input 
-                    id="set-api-key" 
-                    label="API Key" 
-                    type="password" 
-                    password-toggle 
+                <sl-input
+                    id="set-api-key"
+                    label="API Key"
+                    type="password"
+                    password-toggle
                     clearable
                     placeholder="sk-xxxxxxxxxxxxxxxx"
                 >
@@ -35,22 +32,22 @@
 
         <div class="settings-section">
             <div class="section-title">
-                <sl-icon name="cpu"></sl-icon>
-                <span>模型设置</span>
+                <sl-icon name="sliders"></sl-icon>
+                <span>会话默认值</span>
             </div>
-            <div class="section-body">
-                <sl-input 
-                    id="set-model" 
-                    label="模型名称" 
+            <div class="section-body two-columns">
+                <sl-input
+                    id="set-model"
+                    label="模型名称"
                     value="gpt-4o"
                     clearable
                     placeholder="gpt-4o / deepseek-chat / ..."
                 >
                     <sl-icon name="box" slot="prefix"></sl-icon>
                 </sl-input>
-                <sl-input 
-                    id="set-max-history" 
-                    label="历史记录数" 
+                <sl-input
+                    id="set-max-history"
+                    label="历史记录数"
                     type="number"
                     value="30"
                     min="1"
@@ -58,12 +55,51 @@
                 >
                     <sl-icon name="list-numbered" slot="prefix"></sl-icon>
                 </sl-input>
+                <sl-select id="set-default-divination-type" label="默认术数类型" value="auto" hoist>
+                    <sl-option value="auto">自动识别</sl-option>
+                    <sl-option value="bazi">八字</sl-option>
+                    <sl-option value="ziwei">紫微斗数</sl-option>
+                    <sl-option value="xiaoliuren">小六壬</sl-option>
+                    <sl-option value="liuyao">六爻</sl-option>
+                    <sl-option value="meihua">梅花易数</sl-option>
+                    <sl-option value="qimen">奇门遁甲</sl-option>
+                    <sl-option value="xiaoqimen">飞宫小奇门</sl-option>
+                    <sl-option value="xiaochengtu">小成图</sl-option>
+                    <sl-option value="daliuren">大六壬</sl-option>
+                    <sl-option value="jinkoujue">金口诀</sl-option>
+                    <sl-option value="xuankong">玄空风水</sl-option>
+                    <sl-option value="general">通用问事</sl-option>
+                </sl-select>
+                <sl-select id="set-context-mode" label="默认上下文模式" value="smart" hoist>
+                    <sl-option value="smart">智能模式</sl-option>
+                    <sl-option value="anchored">强关联模式</sl-option>
+                    <sl-option value="full">完整原盘模式</sl-option>
+                </sl-select>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="section-title">
+                <sl-icon name="file-earmark-text"></sl-icon>
+                <span>高级 Prompt 配置</span>
+            </div>
+            <div class="section-body">
+                <div class="advanced-entry">
+                    <div class="advanced-entry-copy">
+                        <strong>单独管理 Prompt 模板</strong>
+                        <span>将各类术数的首问/追问模板放到独立弹窗里编辑，避免挤占基础配置空间。</span>
+                    </div>
+                    <sl-button id="open-prompt-settings-btn" variant="default" outline>
+                        <sl-icon name="box-arrow-up-right" slot="prefix"></sl-icon>
+                        打开 Prompt 配置
+                    </sl-button>
+                </div>
             </div>
         </div>
 
         <div class="settings-tips">
             <sl-icon name="lightbulb"></sl-icon>
-            <span>提示：支持 OpenAI、DeepSeek、通义千问等兼容接口的中转服务</span>
+            <span>推荐默认使用“自动识别 + 智能模式”。如果追问时希望更强盘面锚定，可以切到“强关联模式”或“完整原盘模式”。</span>
         </div>
     </div>
 

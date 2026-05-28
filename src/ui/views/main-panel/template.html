@@ -9,6 +9,9 @@
             <span class="header-title">AI 解卦助手</span>
         </div>
         <div class="header-right">
+            <sl-tooltip content="重新完整分析" placement="bottom">
+                <sl-icon-button name="arrow-repeat" id="restart-analysis-btn" class="header-btn"></sl-icon-button>
+            </sl-tooltip>
             <sl-tooltip content="清除对话" placement="bottom">
                 <sl-icon-button name="trash" id="clear-history-btn" class="header-btn"></sl-icon-button>
             </sl-tooltip>
@@ -18,6 +21,37 @@
             <sl-tooltip content="关闭" placement="bottom">
                 <sl-icon-button name="x-lg" id="close-panel-btn" class="header-btn"></sl-icon-button>
             </sl-tooltip>
+        </div>
+    </div>
+
+    <div class="session-section">
+        <div class="session-grid">
+            <sl-select id="divination-type-select" label="术数类型" value="auto" size="small" hoist>
+                <sl-option value="auto">自动识别</sl-option>
+                <sl-option value="bazi">八字</sl-option>
+                <sl-option value="ziwei">紫微斗数</sl-option>
+                <sl-option value="xiaoliuren">小六壬</sl-option>
+                <sl-option value="liuyao">六爻</sl-option>
+                <sl-option value="meihua">梅花易数</sl-option>
+                <sl-option value="qimen">奇门遁甲</sl-option>
+                <sl-option value="xiaoqimen">飞宫小奇门</sl-option>
+                <sl-option value="xiaochengtu">小成图</sl-option>
+                <sl-option value="daliuren">大六壬</sl-option>
+                <sl-option value="jinkoujue">金口诀</sl-option>
+                <sl-option value="xuankong">玄空风水</sl-option>
+                <sl-option value="general">通用问事</sl-option>
+            </sl-select>
+            <sl-select id="context-mode-select" label="上下文模式" value="smart" size="small" hoist>
+                <sl-option value="smart">智能模式</sl-option>
+                <sl-option value="anchored">强关联模式</sl-option>
+                <sl-option value="full">完整原盘模式</sl-option>
+            </sl-select>
+        </div>
+
+        <div class="session-meta">
+            <span id="resolved-type-badge" class="session-badge">当前术数：通用问事</span>
+            <span id="phase-badge" class="session-badge">当前阶段：首问分析</span>
+            <span id="detection-badge" class="session-badge muted">识别结果：尚未抓取</span>
         </div>
     </div>
 
@@ -32,7 +66,7 @@
         </div>
         <div class="data-content">
             <sl-icon name="info-circle" style="color: #666;"></sl-icon>
-            <span id="data-status" class="data-status">点击"抓取数据"获取当前页面排盘信息</span>
+            <span id="data-status" class="data-status">点击“抓取数据”获取当前页面排盘信息</span>
         </div>
     </div>
 
@@ -40,14 +74,14 @@
         <div class="welcome-message">
             <sl-icon name="sparkles" style="font-size: 2.5rem; color: #00d4ff;"></sl-icon>
             <p>欢迎使用 AI 解卦助手</p>
-            <small>请先抓取排盘数据，然后输入您的问题</small>
+            <small>请先抓取排盘数据，再开始首问分析；后续追问会自动切换到追问模式。</small>
         </div>
     </div>
 
     <div class="input-section">
-        <sl-textarea 
-            id="question-input" 
-            placeholder="请输入您想咨询的问题..." 
+        <sl-textarea
+            id="question-input"
+            placeholder="请输入您想咨询的问题..."
             resize="auto"
             rows="1"
             max-rows="4"

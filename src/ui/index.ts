@@ -2,6 +2,7 @@
 import { Logger } from '../utils/logger';
 import { MainPanel } from './views/main-panel';
 import { SettingsDialog } from './components/settings-dialog';
+import { PromptSettingsDialog } from './components/prompt-settings-dialog';
 import { GM_addStyle } from '$';
 import '@shoelace-style/shoelace/dist/shoelace.js';
 import darkThemeCss from '@shoelace-style/shoelace/dist/themes/dark.css?raw';
@@ -36,10 +37,12 @@ export const UIManager = {
         shadowRoot.innerHTML = `
             ${MainPanel.render()}
             ${SettingsDialog.render()}
+            ${PromptSettingsDialog.render()}
         `;
 
         MainPanel.bindEvents(shadowRoot);
         SettingsDialog.bindEvents(shadowRoot);
+        PromptSettingsDialog.bindEvents(shadowRoot);
 
         return shadowRoot;
     }

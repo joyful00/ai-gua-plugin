@@ -1,0 +1,107 @@
+<sl-dialog id="prompt-settings-dialog" label="高级 Prompt 配置" class="prompt-settings-dialog">
+    <div class="prompt-settings-content">
+        <div class="prompt-settings-intro">
+            <sl-icon name="magic"></sl-icon>
+            <span>每种术数都分为“首问分析”和“后续追问”两套模板。这里的修改会保存到本地，并立即影响后续请求。</span>
+        </div>
+
+        <div class="prompt-settings-toolbar">
+            <sl-button id="reset-prompts-btn" size="small" variant="default" outline>
+                <sl-icon name="arrow-counterclockwise" slot="prefix"></sl-icon>
+                恢复默认模板
+            </sl-button>
+        </div>
+
+        <sl-details summary="八字 Prompt" open>
+            <div class="prompt-fields">
+                <sl-textarea id="prompt-bazi-initial" label="八字 - 首问分析" rows="6" resize="auto"></sl-textarea>
+                <sl-textarea id="prompt-bazi-followup" label="八字 - 后续追问" rows="6" resize="auto"></sl-textarea>
+            </div>
+        </sl-details>
+
+        <sl-details summary="紫微斗数 Prompt">
+            <div class="prompt-fields">
+                <sl-textarea id="prompt-ziwei-initial" label="紫微斗数 - 首问分析" rows="6" resize="auto"></sl-textarea>
+                <sl-textarea id="prompt-ziwei-followup" label="紫微斗数 - 后续追问" rows="6" resize="auto"></sl-textarea>
+            </div>
+        </sl-details>
+
+        <sl-details summary="小六壬 Prompt">
+            <div class="prompt-fields">
+                <sl-textarea id="prompt-xiaoliuren-initial" label="小六壬 - 首问分析" rows="6" resize="auto"></sl-textarea>
+                <sl-textarea id="prompt-xiaoliuren-followup" label="小六壬 - 后续追问" rows="6" resize="auto"></sl-textarea>
+            </div>
+        </sl-details>
+
+        <sl-details summary="六爻 Prompt">
+            <div class="prompt-fields">
+                <sl-textarea id="prompt-liuyao-initial" label="六爻 - 首问分析" rows="6" resize="auto"></sl-textarea>
+                <sl-textarea id="prompt-liuyao-followup" label="六爻 - 后续追问" rows="6" resize="auto"></sl-textarea>
+            </div>
+        </sl-details>
+
+        <sl-details summary="梅花易数 Prompt">
+            <div class="prompt-fields">
+                <sl-textarea id="prompt-meihua-initial" label="梅花易数 - 首问分析" rows="6" resize="auto"></sl-textarea>
+                <sl-textarea id="prompt-meihua-followup" label="梅花易数 - 后续追问" rows="6" resize="auto"></sl-textarea>
+            </div>
+        </sl-details>
+
+        <sl-details summary="奇门遁甲 Prompt">
+            <div class="prompt-fields">
+                <sl-textarea id="prompt-qimen-initial" label="奇门遁甲 - 首问分析" rows="6" resize="auto"></sl-textarea>
+                <sl-textarea id="prompt-qimen-followup" label="奇门遁甲 - 后续追问" rows="6" resize="auto"></sl-textarea>
+            </div>
+        </sl-details>
+
+        <sl-details summary="飞宫小奇门 Prompt">
+            <div class="prompt-fields">
+                <sl-textarea id="prompt-xiaoqimen-initial" label="飞宫小奇门 - 首问分析" rows="6" resize="auto"></sl-textarea>
+                <sl-textarea id="prompt-xiaoqimen-followup" label="飞宫小奇门 - 后续追问" rows="6" resize="auto"></sl-textarea>
+            </div>
+        </sl-details>
+
+        <sl-details summary="小成图 Prompt">
+            <div class="prompt-fields">
+                <sl-textarea id="prompt-xiaochengtu-initial" label="小成图 - 首问分析" rows="6" resize="auto"></sl-textarea>
+                <sl-textarea id="prompt-xiaochengtu-followup" label="小成图 - 后续追问" rows="6" resize="auto"></sl-textarea>
+            </div>
+        </sl-details>
+
+        <sl-details summary="大六壬 Prompt">
+            <div class="prompt-fields">
+                <sl-textarea id="prompt-daliuren-initial" label="大六壬 - 首问分析" rows="6" resize="auto"></sl-textarea>
+                <sl-textarea id="prompt-daliuren-followup" label="大六壬 - 后续追问" rows="6" resize="auto"></sl-textarea>
+            </div>
+        </sl-details>
+
+        <sl-details summary="金口诀 Prompt">
+            <div class="prompt-fields">
+                <sl-textarea id="prompt-jinkoujue-initial" label="金口诀 - 首问分析" rows="6" resize="auto"></sl-textarea>
+                <sl-textarea id="prompt-jinkoujue-followup" label="金口诀 - 后续追问" rows="6" resize="auto"></sl-textarea>
+            </div>
+        </sl-details>
+
+        <sl-details summary="玄空风水 Prompt">
+            <div class="prompt-fields">
+                <sl-textarea id="prompt-xuankong-initial" label="玄空风水 - 首问分析" rows="6" resize="auto"></sl-textarea>
+                <sl-textarea id="prompt-xuankong-followup" label="玄空风水 - 后续追问" rows="6" resize="auto"></sl-textarea>
+            </div>
+        </sl-details>
+
+        <sl-details summary="通用问事 Prompt">
+            <div class="prompt-fields">
+                <sl-textarea id="prompt-general-initial" label="通用问事 - 首问分析" rows="6" resize="auto"></sl-textarea>
+                <sl-textarea id="prompt-general-followup" label="通用问事 - 后续追问" rows="6" resize="auto"></sl-textarea>
+            </div>
+        </sl-details>
+    </div>
+
+    <div slot="footer" class="dialog-footer">
+        <sl-button id="back-to-settings-btn" variant="default">返回基础设置</sl-button>
+        <sl-button id="save-prompts-btn" variant="primary">
+            <sl-icon name="check" slot="prefix"></sl-icon>
+            保存 Prompt
+        </sl-button>
+    </div>
+</sl-dialog>
